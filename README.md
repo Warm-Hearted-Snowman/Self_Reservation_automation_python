@@ -11,7 +11,7 @@ This tool allows students of Shahrood University of Technology to make meal rese
 1. Clone the repository:
 
 ```
-git clone https://github.com/Warm-Hearted-Snowman/Self_Reservation_automation_python
+git clone https://github.com/Warm-Hearted-Snowman/Predict_Car_Price_with_MachineLearning
 ```
 
 2. Install the required dependencies:

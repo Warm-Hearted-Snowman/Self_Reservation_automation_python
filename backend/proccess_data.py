@@ -1,12 +1,15 @@
-from module import read_reserve_data
-from fetch_data import get_cookies, generate_cookies, fetch_data, get_reserve_data
+import logging
+from module import read_reserve_data, get_cookies, initialize_data_base
+from fetch_data import fetch_data
 import requests
 
-BASE_URL = 'https://self.shahroodut.ac.ir/api/v0/'
-COOKIES = get_cookies()
+logging.basicConfig(filename='backend.log', level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s', encoding='utf-8')
 
 
-def make_reservation(day_data, meal_time: int):
+def make_reservation(username, day_data, meal_time: int):
+    BASE_URL = 'https://self.shahroodut.ac.ir/api/v0/'
+    COOKIES = get_cookies(username)
     meal_data = day_data['Meals'][meal_time]
     if day_data['Meals'][meal_time]['LastReserved'] == []:
         payload_reservation = [
@@ -22,28 +25,25 @@ def make_reservation(day_data, meal_time: int):
         reserve = requests.post(url=BASE_URL + 'Reservation', cookies=COOKIES,
                                 json=payload_reservation,
                                 allow_redirects=False)
-        print(reserve.status_code)
+        logging.debug(f"Reservation request sent with status code: {reserve.status_code}")
     else:
-        print(f"{meal_data['FoodMenu'][0]['FoodName']} is reserved for {meal_data['DayName']}")
+        logging.info(f" '{meal_data['FoodMenu'][0]['FoodName']}' is already reserved for '{meal_data['DayName']}'")
 
 
-def main():
-    respond = fetch_data()
+def main(username):
+    initialize_data_base()
+    respond = fetch_data(username)
     if respond:
-        reservation_data = read_reserve_data()
+        reservation_data = read_reserve_data(username)
         for data in reservation_data:
             if data["DayStateTitle"] == "برنامه زمانبندی رزرو تعریف نشده است." or data['Meals'][0][
                 "MealStateTitle"] == "خارج از محدوده برنامه زمانبندی رزرو" or data['Meals'][0][
                 "MealStateTitle"] == "برنامه رزرو تعریف نشده است":
-                print(f'Day: {data["DayTitle"]} is unavailable')
+                logging.info(f'Day: {data["DayTitle"]} is unavailable')
             else:
                 # for breakfast
-                make_reservation(data, 0)
+                make_reservation(username, data, 0)
                 # for lunch
-                make_reservation(data, 1)
+                make_reservation(username, data, 1)
                 # for dinner
-                make_reservation(data, 2)
-
-
-if __name__ == '__main__':
-    main()
+                make_reservation(username, data, 2)
