@@ -1,25 +1,43 @@
 import logging
-from module import generate_cookies, get_reserve_data, dump
+from backend_module import generate_cookies, get_reserve_data, dump, User, dump_reserve_data
 
 MAX_RETRIES = 10
 
-logging.basicConfig(filename='backend.log', level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s', encoding='utf-8')
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s',
+    encoding='utf-8'
+)
 
-def fetch_data(username):
+def fetch_data(user: User):
+    """
+    Fetches data for a user from the backend system.
+
+    Args:
+        user (User): The user for which the data is fetched.
+
+    Returns:
+        bool: True if data is fetched and dumped successfully, False otherwise.
+    """
     for i in range(MAX_RETRIES):
-        response = get_reserve_data(username)
+        response = get_reserve_data(user)
+
         if response.status_code == 302:
-            generate_cookies(username)
+            logging.debug('Received a redirect response. Generating new cookies...')
+            generate_cookies(user)
         elif response.text == 'لطفا یکبار از سیستم خارج و دوباره به سیستم ورود کنید(1).' and response.status_code == 400:
-            pass
+            logging.warning('Session expired. Generating new cookies...')
+            generate_cookies(user)
+            return fetch_data(user)
         else:
             try:
-                with open(f'./reservation_datas/reservation_data_{username}.json', 'w+', encoding='utf-8') as f:
-                    dump(response.json(), f, indent=4, ensure_ascii=False)
-                logging.info('Data fetched successfully.')
+                dump_reserve_data(user, response)
+                logging.info('Data fetched and dumped successfully.')
                 return True
             except Exception as e:
                 logging.error(f'An error occurred while writing the data: {e}')
-    logging.warning('Unable to fetch data after maximum retries.')
+
+    logging.error('Unable to fetch data after maximum retries.')
     return False
+
